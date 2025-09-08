@@ -38,7 +38,7 @@ variable "reduct_log_level" {
 
 variable "task_cpu" {
   type    = number
-  default = 512
+  default = 2
 }
 
 variable "task_memory" {
@@ -51,10 +51,6 @@ variable "s3_bucket" {
   type = string
 }
 variable "s3_region" {
-  type = string
-}
-
-variable "s3_prefix" {
   type = string
 }
 
