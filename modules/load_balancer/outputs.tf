@@ -18,3 +18,8 @@ output "http_listener_id" {
   value       = aws_lb_listener.http.id
   description = "HTTP Listener"
 }
+
+output "dns_name" {
+  value       = aws_lb.this.dns_name
+  description = "DNS name of the Load Balancer"
+}

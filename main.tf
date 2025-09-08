@@ -22,8 +22,8 @@ locals {
 module "networking" {
   source           = "./modules/networking"
   name             = local.name
-  vpc_id           = var.vpc_id
   reductstore_port = 8383
+  region           = var.region
 }
 
 # -------------------------
@@ -32,18 +32,30 @@ module "networking" {
 module "load_balancer" {
   source            = "./modules/load_balancer"
   name              = local.name
-  vpc_id            = var.vpc_id
-  public_subnet_ids = var.public_subnet_ids
+  vpc_id            = module.networking.vpc_id
+  public_subnet_ids = module.networking.public_subnet_ids
   security_groups   = [module.networking.alb_id]
 }
+
+
+# -------------------------
+# S3 Bucket for ReductStore
+# -------------------------
+module "s3" {
+  source = "./modules/s3"
+
+  aws_iam_role = module.ecs.task_role_arn
+  project_name = local.name
+  region       = length(var.s3_region) > 0 ? var.s3_region : var.region
+}
+
 
 # -------------------------
 # ECS: Cluster, Roles, Task, Service
 # -------------------------
 module "ecs" {
-  source    = "./modules/ecs"
-  name      = local.name
-  s3_bucket = var.s3_bucket
+  source = "./modules/ecs"
+  name   = local.name
 }
 
 
@@ -68,10 +80,10 @@ locals {
 
   env_s3 = [
     { name = "RS_REMOTE_BACKEND_TYPE", value = "s3" },
-    { name = "RS_REMOTE_BUCKET", value = var.s3_bucket },
+    { name = "RS_REMOTE_BUCKET", value = module.s3.bucket_name },
     { name = "RS_REMOTE_REGION", value = var.s3_region },
-    { name = "RS_REMOTE_ACCESS_KEY", value = var.s3_access_key },
-    { name = "RS_REMOTE_SECRET_KEY", value = var.s3_secret_key },
+    { name = "RS_REMOTE_ACCESS_KEY", value = module.s3.access_key },
+    { name = "RS_REMOTE_SECRET_KEY", value = module.s3.secret_key },
     { name = "RS_REMOTE_CACHE_PATH", value = "/tmp/cache" },
     { name = "RS_REMOTE_CACHE_SIZE", value = "5GB" }
   ]
@@ -121,7 +133,7 @@ resource "aws_ecs_service" "this" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = module.networking.private_subnet_ids
     security_groups  = [module.networking.svc_id]
     assign_public_ip = false
   }

@@ -1,5 +1,5 @@
 output "alb_dns_name" {
-  value = aws_lb.this.dns_name
+  value = module.load_balancer.dns_name
 }
 
 output "service_name" {

@@ -26,29 +26,11 @@ resource "aws_iam_role_policy_attachment" "task_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# S3 access when S3 backend is enabled
-data "aws_iam_policy_document" "task_extra" {
-  statement {
-    sid     = "AllowS3"
-    effect  = "Allow"
-    actions = ["s3:GetObject", "s3:PutObject", "s3:ListBucket", "s3:DeleteObject"]
-    resources = [
-      "arn:aws:s3:::${var.s3_bucket}",
-      "arn:aws:s3:::${var.s3_bucket}/*"
-    ]
-  }
-}
-
 resource "aws_iam_role" "task_role" {
   name               = "${var.name}-task"
   assume_role_policy = data.aws_iam_policy_document.task_execution_assume.json
 }
 
-resource "aws_iam_role_policy" "task_extra" {
-  name   = "${var.name}-task-extra"
-  role   = aws_iam_role.task_role.id
-  policy = data.aws_iam_policy_document.task_extra.json
-}
 
 # CloudWatch Logs
 resource "aws_cloudwatch_log_group" "this" {
