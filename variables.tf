@@ -11,10 +11,9 @@ variable "project_name" {
 }
 
 
-variable "reduct_image" {
-  type        = string
-  default     = "reductstore/reductstore:latest"
-  description = "ReductStore Docker image"
+variable "reduct_tag" {
+  type    = string
+  default = "main"
 }
 
 variable "reduct_api_token" {
@@ -31,13 +30,13 @@ variable "reduct_log_level" {
 
 variable "task_cpu" {
   type        = number
-  default     = 2
+  default     = 1024
   description = "Number of CPU units for the ECS task"
 }
 
 variable "task_memory" {
   type        = number
-  default     = 1024
+  default     = 2048
   description = "Amount of memory (in MiB) for the ECS task"
 }
 

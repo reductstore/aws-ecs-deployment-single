@@ -5,7 +5,7 @@ resource "aws_vpc" "this" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "reductstore-vpc"
+    Name = "reductstore_vpc"
   }
 }
 
@@ -13,7 +13,7 @@ resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
   tags = {
-    Name = "reductstore-igw"
+    Name = "reductstore_igw"
   }
 }
 
@@ -107,8 +107,8 @@ resource "aws_route_table_association" "private_b" {
 
 
 resource "aws_security_group" "svc" {
-  name        = "${var.name}-svc-sg"
-  description = "Allow ALB -> ECS tasks"
+  name        = "${var.project_name}_svc_sg"
+  description = "Allow ALB/ECS tasks"
   vpc_id      = aws_vpc.this.id
 
   egress {
@@ -120,7 +120,7 @@ resource "aws_security_group" "svc" {
 }
 
 resource "aws_security_group" "alb" {
-  name        = "${var.name}-alb-sg"
+  name        = "${var.project_name}_alb_sg"
   description = "Public access to ALB"
   vpc_id      = aws_vpc.this.id
 

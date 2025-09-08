@@ -1,5 +1,5 @@
 output "bucket_name" {
-  value       = aws_s3_bucket.reductstore.bucket
+  value       = aws_s3_bucket.this.bucket
   description = "Name of the S3 bucket"
 }
 

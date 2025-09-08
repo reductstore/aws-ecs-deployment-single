@@ -28,21 +28,21 @@ data "aws_iam_policy_document" "s3_policy" {
 }
 
 resource "aws_iam_role_policy" "s3_access" {
-  name   = "${var.project_name}-s3-access"
-  role   = var.aws_iam_role
+  name   = "${var.project_name}_s3_access"
+  role   = var.aws_iam_role_name
   policy = data.aws_iam_policy_document.s3_policy.json
 }
 
 
 resource "aws_iam_user" "s3_user" {
-  name = "${var.project_name}-reductstore-user"
+  name = "${var.project_name}_reductstore_user"
   tags = {
     Name = "ReductStore S3 User"
   }
 }
 
 resource "aws_iam_user_policy" "s3_access" {
-  name = "reductstore-s3-access"
+  name = "reductstore_s3_access"
   user = aws_iam_user.s3_user.name
 
   policy = jsonencode({

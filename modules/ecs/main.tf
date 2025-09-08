@@ -2,7 +2,7 @@
 # ECS: Cluster, Roles, Task, Service
 # -------------------------
 resource "aws_ecs_cluster" "this" {
-  name = "${var.name}-cluster"
+  name = "${var.project_name}_cluster"
 }
 
 data "aws_iam_policy_document" "task_execution_assume" {
@@ -16,7 +16,7 @@ data "aws_iam_policy_document" "task_execution_assume" {
 }
 
 resource "aws_iam_role" "task_execution" {
-  name               = "${var.name}-task-exec"
+  name               = "${var.project_name}_task_exec"
   assume_role_policy = data.aws_iam_policy_document.task_execution_assume.json
 }
 
@@ -27,13 +27,13 @@ resource "aws_iam_role_policy_attachment" "task_exec_policy" {
 }
 
 resource "aws_iam_role" "task_role" {
-  name               = "${var.name}-task"
+  name               = "${var.project_name}_task"
   assume_role_policy = data.aws_iam_policy_document.task_execution_assume.json
 }
 
 
 # CloudWatch Logs
 resource "aws_cloudwatch_log_group" "this" {
-  name              = "/ecs/${var.name}"
+  name              = "/ecs/${var.project_name}"
   retention_in_days = 14
 }

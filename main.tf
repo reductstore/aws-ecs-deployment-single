@@ -5,6 +5,12 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
+
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "3.6.2"
+
+    }
   }
 }
 
@@ -12,16 +18,12 @@ provider "aws" {
   region = var.region
 }
 
-locals {
-  name = "${var.project_name}-reductstore"
-}
-
 # -------------------------
 # Networking & Security
 # -------------------------
 module "networking" {
   source           = "./modules/networking"
-  name             = local.name
+  project_name     = var.project_name
   reductstore_port = 8383
   region           = var.region
 }
@@ -31,7 +33,7 @@ module "networking" {
 # -------------------------
 module "load_balancer" {
   source            = "./modules/load_balancer"
-  name              = local.name
+  project_name      = var.project_name
   vpc_id            = module.networking.vpc_id
   public_subnet_ids = module.networking.public_subnet_ids
   security_groups   = [module.networking.alb_id]
@@ -44,9 +46,9 @@ module "load_balancer" {
 module "s3" {
   source = "./modules/s3"
 
-  aws_iam_role = module.ecs.task_role_arn
-  project_name = local.name
-  region       = length(var.s3_region) > 0 ? var.s3_region : var.region
+  aws_iam_role_name = module.ecs.task_role_name
+  project_name      = var.project_name
+  region            = length(var.s3_region) > 0 ? var.s3_region : var.region
 }
 
 
@@ -54,8 +56,8 @@ module "s3" {
 # ECS: Cluster, Roles, Task, Service
 # -------------------------
 module "ecs" {
-  source = "./modules/ecs"
-  name   = local.name
+  source       = "./modules/ecs"
+  project_name = var.project_name
 }
 
 
@@ -81,7 +83,7 @@ locals {
   env_s3 = [
     { name = "RS_REMOTE_BACKEND_TYPE", value = "s3" },
     { name = "RS_REMOTE_BUCKET", value = module.s3.bucket_name },
-    { name = "RS_REMOTE_REGION", value = var.s3_region },
+    { name = "RS_REMOTE_REGION", value = length(var.s3_region) > 0 ? var.s3_region : var.region },
     { name = "RS_REMOTE_ACCESS_KEY", value = module.s3.access_key },
     { name = "RS_REMOTE_SECRET_KEY", value = module.s3.secret_key },
     { name = "RS_REMOTE_CACHE_PATH", value = "/tmp/cache" },
@@ -90,7 +92,7 @@ locals {
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family                   = "${local.name}-taskdef"
+  family                   = "${var.project_name}_taskdef"
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   network_mode             = "awsvpc"
@@ -98,10 +100,11 @@ resource "aws_ecs_task_definition" "this" {
   execution_role_arn       = module.ecs.task_execution_role_arn
   task_role_arn            = module.ecs.task_role_arn
 
+
   container_definitions = jsonencode([
     {
       name      = "reductstore"
-      image     = var.reduct_image
+      image     = "reduct/store:${var.reduct_tag}"
       essential = true
       portMappings = [{
         containerPort = 8383
@@ -126,11 +129,12 @@ resource "aws_ecs_task_definition" "this" {
 
 # ECS Service
 resource "aws_ecs_service" "this" {
-  name            = "${local.name}-svc"
-  cluster         = module.ecs.cluster_id
-  task_definition = aws_ecs_task_definition.this.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                 = "${var.project_name}_svc"
+  cluster              = module.ecs.cluster_id
+  task_definition      = aws_ecs_task_definition.this.arn
+  desired_count        = 1
+  launch_type          = "FARGATE"
+  force_new_deployment = true
 
   network_configuration {
     subnets          = module.networking.private_subnet_ids
@@ -142,10 +146,6 @@ resource "aws_ecs_service" "this" {
     target_group_arn = module.load_balancer.target_group_arn
     container_name   = "reductstore"
     container_port   = 8383
-  }
-
-  lifecycle {
-    ignore_changes = [task_definition] # so rolling updates via new task defs are easier
   }
 
   depends_on = [

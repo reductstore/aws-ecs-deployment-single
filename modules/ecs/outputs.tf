@@ -8,6 +8,11 @@ output "task_role_arn" {
   description = "ARN of the ECS Task Role"
 }
 
+output "task_role_name" {
+  value       = aws_iam_role.task_role.name
+  description = "Name of the ECS Task Role"
+}
+
 output "log_group_name" {
   value       = aws_cloudwatch_log_group.this.name
   description = "Name of the CloudWatch Log Group"
