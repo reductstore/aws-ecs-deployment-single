@@ -4,6 +4,16 @@ variable "region" {
   description = "AWS region"
 }
 
+variable "resilient_model" {
+  type        = string
+  default     = "simple"
+  description = "Resilient model for ReductStore (e.g., simple, hot-backup"
+  validation {
+    condition     = contains(["simple", "hot-backup"], var.resilient_model)
+    error_message = "resilent_model must be either 'simple' or 'hot-backup'"
+  }
+}
+
 variable "project_name" {
   type        = string
   default     = "reduct"

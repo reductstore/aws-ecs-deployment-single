@@ -65,3 +65,35 @@ resource "aws_iam_user_policy" "s3_access" {
 resource "aws_iam_access_key" "s3_user_key" {
   user = aws_iam_user.s3_user.name
 }
+
+## Buckup bucket for hot-backup model
+resource "aws_s3_bucket" "backup" {
+  count  = var.resilient_model == "hot-backup" ? 1 : 0
+  bucket = "${var.project_name}-backup-${var.region}" # e.g. reductstore-backup-eu-central-1
+
+  tags = {
+    Name = "reductstore-backup-data"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "backup" {
+  count                   = var.resilient_model == "hot-backup" ? 1 : 0
+  bucket                  = aws_s3_bucket.backup[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+data "aws_iam_policy_document" "backup_policy" {
+  count = var.resilient_model == "hot-backup" ? 1 : 0
+
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject"
+    ]
+    resources = ["${aws_s3_bucket.backup[0].arn}/*"]
+  }
+}
