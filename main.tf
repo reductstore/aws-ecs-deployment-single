@@ -5,12 +5,6 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
-
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "3.6.2"
-
-    }
   }
 }
 
@@ -45,7 +39,6 @@ module "load_balancer" {
 # -------------------------
 module "s3" {
   source = "./modules/s3"
-
   aws_iam_role_name = module.ecs.task_role_name
   project_name      = var.project_name
   region            = length(var.s3_region) > 0 ? var.s3_region : var.region
@@ -123,6 +116,13 @@ resource "aws_ecs_task_definition" "this" {
           awslogs-stream-prefix = "ecs"
         }
       }
+      healthCheck = {
+        command     = ["CMD-SHELL", "reduct-cli server alive http://${var.reduct_api_token}@127.0.0.1:8383"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 60
+      }
     }
   ])
 }
@@ -133,8 +133,16 @@ resource "aws_ecs_service" "this" {
   cluster              = module.ecs.cluster_id
   task_definition      = aws_ecs_task_definition.this.arn
   desired_count        = 1
+    deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   launch_type          = "FARGATE"
   force_new_deployment = true
+
+  #  helpful to fail fast instead of thrashing
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 
   network_configuration {
     subnets          = module.networking.private_subnet_ids

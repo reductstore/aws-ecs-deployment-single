@@ -24,8 +24,8 @@ variable "reduct_api_token" {
 
 variable "reduct_log_level" {
   type        = string
-  default     = "info"
-  description = "ReductStore log level (e.g., debug, info, warn, error)"
+  default     = "INFO"
+  description = "ReductStore log level (e.g., DEBUG, INFO, WARNING, ERROR)"
 }
 
 variable "task_cpu" {
