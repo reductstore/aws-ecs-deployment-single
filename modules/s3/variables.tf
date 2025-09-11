@@ -14,5 +14,5 @@ variable "aws_iam_role_name" {
 }
 
 variable "resilient_model" {
-  type        = string
+  type = string
 }

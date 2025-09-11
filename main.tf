@@ -55,6 +55,30 @@ module "ecs" {
 }
 
 
+#-----
+# Private DNS for service discovery (optional, but useful)
+#-----
+resource "aws_service_discovery_private_dns_namespace" "ns" {
+  name        = "reduct.local"
+  vpc         = module.networking.vpc_id
+  description = "Private DNS namespace for service discovery"
+}
+
+
+resource "aws_service_discovery_service" "main_svc" {
+  name = "main" # becomes main.reduct.local
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.ns.id
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+    routing_policy = "MULTIVALUE"
+  }
+}
+
+
+
 # Task Definition
 locals {
   main_instance = {
@@ -108,10 +132,22 @@ locals {
       startPeriod = 60
     }
   }
+
+  env_ovverides_backup = [
+    {
+      name  = "RS_REMOTE_BACKUP_BUCKET"
+      value = module.s3.bucket_name_backup
+    }
+  ]
+
+  backup_instance = merge(local.main_instance, {
+    name        = "reductstore-backup"
+    environment = concat(local.main_instance.environment, local.env_ovverides_backup)
+  })
 }
 
 
-resource "aws_ecs_task_definition" "this" {
+resource "aws_ecs_task_definition" "main" {
   family                   = "${var.project_name}_taskdef"
   cpu                      = var.task_cpu
   memory                   = var.task_memory
@@ -127,10 +163,10 @@ resource "aws_ecs_task_definition" "this" {
 }
 
 # ECS Service
-resource "aws_ecs_service" "this" {
-  name                               = "${var.project_name}_svc"
+resource "aws_ecs_service" "main" {
+  name                               = "${var.project_name}_main"
   cluster                            = module.ecs.cluster_id
-  task_definition                    = aws_ecs_task_definition.this.arn
+  task_definition                    = aws_ecs_task_definition.main.arn
   desired_count                      = 1
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
@@ -155,8 +191,37 @@ resource "aws_ecs_service" "this" {
     container_port   = 8383
   }
 
+  service_registries {
+    registry_arn = aws_service_discovery_service.main_svc.arn
+  }
+
   depends_on = [
     module.load_balancer.http_listener_id,
     module.load_balancer.target_group_id
   ]
+}
+
+
+
+
+
+# -------------------------
+# Backup Service (if hot-backup model)
+# -------------------------
+module "backup_service" {
+  count                       = var.resilient_model == "hot-backup" ? 1 : 0
+  source                      = "./modules/backup_service"
+  project_name                = var.project_name
+  backup_instance             = local.backup_instance
+  cluster_id                  = module.ecs.cluster_id
+  ecs_task_execution_role_arn = module.ecs.task_execution_role_arn
+  ecs_task_role_arn           = module.ecs.task_role_arn
+  networking = {
+    private_subnet_ids = module.networking.private_subnet_ids
+    svc_id             = module.networking.svc_id
+  }
+  cluster_arn        = module.ecs.cluster_arn
+  dns_namespace_id   = aws_service_discovery_private_dns_namespace.ns.id
+  api_token          = var.reduct_api_token
+  ecs_event_role_arn = module.ecs.ecs_event_role_arn
 }

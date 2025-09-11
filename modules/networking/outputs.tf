@@ -23,3 +23,9 @@ output "private_subnet_ids" {
   value       = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   description = "List of private subnet IDs"
 }
+
+
+output "security_role_arn" {
+  value       = aws_security_group_rule.alb_to_svc.id
+  description = "ARN of the ECS Service Role"
+}

@@ -22,3 +22,13 @@ output "cluster_id" {
   value       = aws_ecs_cluster.this.id
   description = "ID of the ECS Cluster"
 }
+
+output "cluster_arn" {
+  value       = aws_ecs_cluster.this.arn
+  description = "ARN of the ECS Cluster"
+}
+
+output "ecs_event_role_arn" {
+  value       = aws_iam_role.ecs_events.arn
+  description = "ARN of the ECS Events Role"
+}

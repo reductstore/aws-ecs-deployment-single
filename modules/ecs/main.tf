@@ -37,3 +37,24 @@ resource "aws_cloudwatch_log_group" "this" {
   name              = "/ecs/${var.project_name}"
   retention_in_days = 14
 }
+
+# Give EventBridge permissions to run ECS tasks
+resource "aws_iam_role" "ecs_events" {
+  name = "${var.project_name}_events"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "events.amazonaws.com"
+      }
+    }]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "ecs_events_policy" {
+  role       = aws_iam_role.ecs_events.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceEventsRole"
+}
