@@ -9,6 +9,7 @@ resource "aws_service_discovery_service" "backup_svc" {
     }
     routing_policy = "MULTIVALUE"
   }
+
 }
 
 
@@ -66,24 +67,28 @@ resource "aws_cloudwatch_event_rule" "backup_schedule" {
 
 resource "aws_cloudwatch_event_target" "backup_task" {
   rule      = aws_cloudwatch_event_rule.backup_schedule.name
-  target_id = "ecs-backup-task"
+  target_id = "backup-task"
   arn       = var.cluster_arn
   role_arn  = var.ecs_event_role_arn
   input = jsonencode({
     containerOverrides = [
       {
-        name = "reductstore"
+        name = var.backup_instance.name
         command = [
-          "reduct-cli", "cp", "http://${var.api_token}@main.reduct.local:8383/data", "http://${var.api_token}@localhost:8383/data"
+          "reduct-cli", "cp", "http://${var.api_token}@main.${var.project_name}.local:8383/data", "http://${var.api_token}@backup.${var.project_name}.local:8383/data",
+          # ">/dev/null",  "2>&1", "&&", "echo", "Backup", "completed"
+          # "reduct-cli", "server", "status", "http://${var.api_token}@backup.${var.project_name}.local:8383"
+
         ]
       }
     ]
   })
 
   ecs_target {
-    launch_type            = "FARGATE"
+    task_count             = 1
     task_definition_arn    = aws_ecs_task_definition.backup.arn
-    enable_execute_command = true
+    enable_execute_command = false
+    launch_type            = "FARGATE"
 
     network_configuration {
       subnets          = var.networking.private_subnet_ids

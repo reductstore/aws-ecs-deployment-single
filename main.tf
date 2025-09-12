@@ -59,9 +59,10 @@ module "ecs" {
 # Private DNS for service discovery (optional, but useful)
 #-----
 resource "aws_service_discovery_private_dns_namespace" "ns" {
-  name        = "reduct.local"
+  name        = "${var.project_name}.local"
   vpc         = module.networking.vpc_id
   description = "Private DNS namespace for service discovery"
+
 }
 
 
@@ -200,9 +201,6 @@ resource "aws_ecs_service" "main" {
     module.load_balancer.target_group_id
   ]
 }
-
-
-
 
 
 # -------------------------

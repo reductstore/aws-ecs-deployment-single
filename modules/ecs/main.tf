@@ -39,22 +39,40 @@ resource "aws_cloudwatch_log_group" "this" {
 }
 
 # Give EventBridge permissions to run ECS tasks
-resource "aws_iam_role" "ecs_events" {
-  name = "${var.project_name}_events"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-    }]
-  })
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
 }
 
+resource "aws_iam_role" "ecs_events" {
+  name               = "ecs_events"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
 
-resource "aws_iam_role_policy_attachment" "ecs_events_policy" {
-  role       = aws_iam_role.ecs_events.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceEventsRole"
+data "aws_iam_policy_document" "ecs_events_run_task_with_any_role" {
+  statement {
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = ["*"]
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["ecs:RunTask"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_events_run_task_with_any_role" {
+  name   = "ecs_events_run_task_with_any_role"
+  role   = aws_iam_role.ecs_events.id
+  policy = data.aws_iam_policy_document.ecs_events_run_task_with_any_role.json
 }
