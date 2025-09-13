@@ -111,6 +111,14 @@ resource "aws_security_group" "svc" {
   description = "Allow ALB/ECS tasks"
   vpc_id      = aws_vpc.this.id
 
+  ingress {
+    description = "ReductStore HTTP API"
+    from_port   = 8383
+    to_port     = 8383
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

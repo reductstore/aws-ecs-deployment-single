@@ -75,8 +75,8 @@ resource "aws_cloudwatch_event_target" "backup_task" {
       {
         name = var.backup_instance.name
         command = [
-          "reduct-cli", "cp", "http://${var.api_token}@main.${var.project_name}.local:8383/data", "http://${var.api_token}@backup.${var.project_name}.local:8383/data",
-          # ">/dev/null",  "2>&1", "&&", "echo", "Backup", "completed"
+          "sh", "-c",
+          "reduct-cli cp http://${var.api_token}@main.${var.project_name}.local:8383/data http://${var.api_token}@backup.${var.project_name}.local:8383/data >/dev/null 2>&1 && echo 'Backup completed'"
           # "reduct-cli", "server", "status", "http://${var.api_token}@backup.${var.project_name}.local:8383"
 
         ]

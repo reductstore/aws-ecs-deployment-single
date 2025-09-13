@@ -142,8 +142,11 @@ locals {
   ]
 
   backup_instance = merge(local.main_instance, {
-    name        = "reductstore-backup"
-    environment = concat(local.main_instance.environment, local.env_ovverides_backup)
+    name = "reductstore-backup"
+    environment = concat(
+      [for env in local.main_instance.environment : env if env.name != "RS_REMOTE_BACKUP_BUCKET"],
+      local.env_ovverides_backup
+    )
   })
 }
 
